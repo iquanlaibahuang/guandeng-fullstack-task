@@ -41,6 +41,12 @@ def recompute() -> dict:
             "k": int((x["stale"] & x["cancelled"]).sum()),
         }), include_groups=False)
 
+    # V2：按仓算单笔期望，只对期望为正的仓保持拦截
+    pnl = {w: r["k"] * LOSS - r["n"] * COST for w, r in wh.iterrows()}
+    enabled = [w for w, r in wh.iterrows() if r["k"] * LOSS - r["n"] * COST > 0]
+    v2_mask = (ev["stale"] >= 15) & ev["warehouse"].isin(enabled)
+    v2_n, v2_k = int(v2_mask.sum()), int((v2_mask & cancelled).sum())
+
     return {
         "去重后订单数": (len(d), 1162),
         "有效样本(排除未回传)": (len(ev), 1116),
@@ -55,6 +61,11 @@ def recompute() -> dict:
         "直觉规则A净收益": (round(naive_caught * LOSS - naive * COST, 1), 84.0),
         "华东一仓延迟组砍单率": (round(float(wh.loc["华东一仓", "k"]) / float(wh.loc["华东一仓", "n"]), 4), 0.0566),
         "华东一仓延迟组样本": (int(wh.loc["华东一仓", "n"]), 53),
+        "华东一仓P0净收益": (round(float(pnl["华东一仓"]), 1), -366.0),
+        "华东一仓单笔期望": (round((float(wh.loc["华东一仓", "k"]) / float(wh.loc["华东一仓", "n"])) * LOSS - COST, 1), -6.9),
+        "V2 拦截数": (v2_n, 199),
+        "V2 拦对砍单": (v2_k, 80),
+        "V2 净收益": (round(v2_k * LOSS - v2_n * COST, 1), 4812.0),
     }
 
 

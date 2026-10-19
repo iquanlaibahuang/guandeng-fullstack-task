@@ -198,5 +198,79 @@
     "available_stock_corr": -0.0163,
     "daily_orders_corr": 0.1254,
     "staleness_corr": 0.346
-  }
+  },
+  "v2_warehouse_switch": {
+    "explanation": "P0 规则按仓拆开算单笔期望，把为负的仓降级为影子模式（只记录不拦截、成本 0）",
+    "enabled": [
+      "华南一仓",
+      "华中一仓",
+      "华北二仓",
+      "西南一仓"
+    ],
+    "shadow": [
+      "华东一仓"
+    ],
+    "intercepted": 199,
+    "cancels_caught": 80,
+    "net_per_7d": 4812.0,
+    "uplift_vs_v1": 366.0,
+    "uplift_pct": 8.2
+  },
+  "warehouse_pnl": [
+    {
+      "warehouse": "华南一仓",
+      "intercepted": 42,
+      "caught": 19,
+      "hit_rate": 0.4524,
+      "cost": 504.0,
+      "saved": 1710.0,
+      "net": 1206.0,
+      "net_per_intercept": 28.7,
+      "verdict": "保持拦截"
+    },
+    {
+      "warehouse": "华中一仓",
+      "intercepted": 54,
+      "caught": 23,
+      "hit_rate": 0.4259,
+      "cost": 648.0,
+      "saved": 2070.0,
+      "net": 1422.0,
+      "net_per_intercept": 26.3,
+      "verdict": "保持拦截"
+    },
+    {
+      "warehouse": "华北二仓",
+      "intercepted": 47,
+      "caught": 19,
+      "hit_rate": 0.4043,
+      "cost": 564.0,
+      "saved": 1710.0,
+      "net": 1146.0,
+      "net_per_intercept": 24.4,
+      "verdict": "保持拦截"
+    },
+    {
+      "warehouse": "西南一仓",
+      "intercepted": 56,
+      "caught": 19,
+      "hit_rate": 0.3393,
+      "cost": 672.0,
+      "saved": 1710.0,
+      "net": 1038.0,
+      "net_per_intercept": 18.5,
+      "verdict": "保持拦截"
+    },
+    {
+      "warehouse": "华东一仓",
+      "intercepted": 53,
+      "caught": 3,
+      "hit_rate": 0.0566,
+      "cost": 636.0,
+      "saved": 270.0,
+      "net": -366.0,
+      "net_per_intercept": -6.9,
+      "verdict": "降级为影子模式"
+    }
+  ]
 }

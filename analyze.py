@@ -131,6 +131,25 @@ def warehouse_view(d: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("cancel_rate", ascending=False)
 
 
+def warehouse_pnl(d: pd.DataFrame) -> pd.DataFrame:
+    """V2 的依据：把 P0 规则按仓拆开，看每个仓是赚是赔。
+
+    单笔期望 = 命中率×90 − 12。为负的仓（本例是华东一仓）应降级为影子模式：
+    只记录不拦截，成本为 0，同时继续积累标签以便将来恢复。
+    """
+    ev = d[d["status"] != "unreported"]
+    st = ev[ev["staleness_min"] >= STALE_THRESHOLD]
+    g = st.groupby("warehouse")["status"].agg(intercepted="count",
+                                              caught=lambda s: int((s == "cancelled").sum()))
+    g["hit_rate"] = (g["caught"] / g["intercepted"]).round(4)
+    g["cost"] = g["intercepted"] * COST_PER_INTERCEPT
+    g["saved"] = g["caught"] * LOSS_PER_CANCEL
+    g["net"] = g["saved"] - g["cost"]
+    g["net_per_intercept"] = (g["hit_rate"] * LOSS_PER_CANCEL - COST_PER_INTERCEPT).round(1)
+    g["verdict"] = np.where(g["net_per_intercept"] > 0, "保持拦截", "降级为影子模式")
+    return g.sort_values("net_per_intercept", ascending=False).reset_index()
+
+
 def sweep(d: pd.DataFrame) -> pd.DataFrame:
     ev = d[d["status"] != "unreported"]
     cancelled = (ev["status"] == "cancelled").to_numpy()
@@ -214,6 +233,14 @@ def main() -> dict:
     stale = ev[ev["staleness_min"] >= STALE_THRESHOLD]
     best = swp.loc[swp["net"].idxmax()]
     best_rule = pol.iloc[0]
+    pnl = warehouse_pnl(d)
+    enabled = pnl.loc[pnl["net_per_intercept"] > 0, "warehouse"].tolist()
+    disabled = pnl.loc[pnl["net_per_intercept"] <= 0, "warehouse"].tolist()
+    mask_v2 = (d["staleness_min"] >= STALE_THRESHOLD) & d["warehouse"].isin(enabled) \
+        & (d["status"] != "unreported")
+    v2_caught = int((mask_v2 & (d["status"] == "cancelled")).sum())
+    v2_n = int(mask_v2.sum())
+    v2_net = v2_caught * LOSS_PER_CANCEL - v2_n * COST_PER_INTERCEPT
 
     findings = {
         "meta": meta,
@@ -262,6 +289,17 @@ def main() -> dict:
             "daily_orders_corr": round(float(np.corrcoef(ev["daily_orders"], (ev["status"] == "cancelled"))[0, 1]), 4),
             "staleness_corr": round(float(np.corrcoef(ev["staleness_min"], (ev["status"] == "cancelled"))[0, 1]), 4),
         },
+        "v2_warehouse_switch": {
+            "explanation": "P0 规则按仓拆开算单笔期望，把为负的仓降级为影子模式（只记录不拦截、成本 0）",
+            "enabled": enabled,
+            "shadow": disabled,
+            "intercepted": v2_n,
+            "cancels_caught": v2_caught,
+            "net_per_7d": round(float(v2_net), 1),
+            "uplift_vs_v1": round(float(v2_net) - best_rule["net"], 1),
+            "uplift_pct": round((float(v2_net) - best_rule["net"]) / best_rule["net"] * 100, 1),
+        },
+        "warehouse_pnl": pnl.to_dict(orient="records"),
     }
 
     OUT.mkdir(exist_ok=True)
@@ -270,6 +308,7 @@ def main() -> dict:
     pol.to_csv(OUT / "policy_compare.csv", index=False, encoding="utf-8-sig")
     wh.to_csv(OUT / "warehouse_view.csv", index=False, encoding="utf-8-sig")
     swp.to_csv(OUT / "threshold_sweep.csv", index=False, encoding="utf-8-sig")
+    pnl.to_csv(OUT / "warehouse_pnl.csv", index=False, encoding="utf-8-sig")
     return findings
 
 
