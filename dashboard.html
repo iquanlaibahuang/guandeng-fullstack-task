@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>履约缺货归因看板</title>
+<style>
+  :root { --ink:#1a1a1a; --sub:#6b7280; --line:#e5e7eb; --good:#0f9d58; --bad:#c0392b; --accent:#1565c0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; color:var(--ink); background:#f7f8fa; }
+  .wrap { max-width:1080px; margin:0 auto; padding:32px 20px 64px; }
+  header h1 { font-size:24px; margin:0 0 6px; letter-spacing:-.3px; }
+  header p { margin:0; color:var(--sub); font-size:14px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:26px 0; }
+  .kpi { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .kpi .lab { font-size:12.5px; color:var(--sub); }
+  .kpi .val { font-size:26px; font-weight:650; margin-top:4px; letter-spacing:-.5px; }
+  .kpi .val.bad { color:var(--bad); }
+  .kpi .val.good { color:var(--good); }
+  .panel { background:#fff; border:1px solid var(--line); border-radius:10px; padding:22px; margin:18px 0; }
+  .panel h2 { font-size:16px; margin:0 0 4px; }
+  .panel .hint { color:var(--sub); font-size:13px; margin:0 0 18px; }
+  .sim { display:grid; grid-template-columns:1fr 1fr; gap:22px; align-items:start; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .big { font-size:34px; font-weight:700; letter-spacing:-1px; }
+  .row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .row:last-child { border:0; }
+  .row b { font-weight:600; }
+  .tag { display:inline-block; padding:2px 9px; border-radius:99px; font-size:12px; font-weight:600; }
+  .tag.good { background:#e8f5e9; color:var(--good); }
+  .tag.bad { background:#fdecea; color:var(--bad); }
+  img { width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th,td { text-align:right; padding:9px 8px; border-bottom:1px solid var(--line); }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--sub); font-weight:500; font-size:12.5px; }
+  tr.best { background:#f1f8e9; }
+  footer { color:var(--sub); font-size:12.5px; margin-top:26px; }
+  @media (max-width:720px){ .sim{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>履约缺货归因 · 拦截策略模拟器</h1>
+    <p>数据：1220 行原始履约记录 → 去重 1162 单 → 有效样本 1116 单（46 单状态未回传已排除）</p>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lab">整体缺货砍单率</div><div class="val">10.66%</div></div>
+    <div class="kpi"><div class="lab">同步延迟 &lt;15 分钟</div><div class="val good">4.17%</div></div>
+    <div class="kpi"><div class="lab">同步延迟 ≥15 分钟</div><div class="val bad">32.94%</div></div>
+    <div class="kpi"><div class="lab">延迟订单占全部砍单</div><div class="val bad">69.8%</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>拖动阈值，看这笔生意赚不赚</h2>
+    <p class="hint">规则：同步延迟 ≥ 阈值的订单，在进入拣货前触发一次实时校验预警。拦截一次 12 元，漏掉一单砍单 90 元。</p>
+    <div class="sim">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="color:var(--sub);font-size:13px">阈值（分钟）</span>
+          <span class="big" id="tVal">15</span>
+        </div>
+        <input type="range" id="t" min="0" max="60" step="1" value="15">
+        <div style="display:flex;justify-content:space-between;color:var(--sub);font-size:12px"><span>0</span><span>最优区间 13–20</span><span>60</span></div>
+        <div style="margin-top:18px;padding:14px;border-radius:8px;background:#fafbfc;border:1px solid var(--line)">
+          <div style="font-size:12.5px;color:var(--sub)">7 天净收益</div>
+          <div class="big" id="net">—</div>
+          <div id="verdict" style="margin-top:6px"></div>
+        </div>
+      </div>
+      <div id="detail"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>规则对比：为什么"库存少就拦"是白干</h2>
+    <p class="hint">盈亏平衡需要准确率 &gt; 13.3%（12/90）。来自 output/policy_compare.csv</p>
+    <table id="policy"><thead><tr><th>规则</th><th>拦截</th><th>拦对</th><th>准确率</th><th>覆盖</th><th>成本</th><th>挽回</th><th>净收益</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>证据一：15 分钟是一道坎</h2>
+    <p class="hint">15–30 分钟与 30–60 分钟的砍单率几乎持平（34.6% vs 31.7%），说明延迟超过阈值后库存数据即彻底失效。</p>
+    <img src="/figures/cancel_rate_by_staleness.png" alt="砍单率随同步延迟">
+  </div>
+
+  <div class="panel">
+    <h2>证据二：阈值扫描</h2>
+    <p class="hint">13–20 分钟区间净收益基本持平，取 15 分钟作为运营口径。</p>
+    <img src="/figures/threshold_sweep.png" alt="阈值扫描">
+  </div>
+
+  <div class="panel">
+    <h2>证据三：华东一仓是反例</h2>
+    <p class="hint">同样 23.8% 的订单延迟，延迟组砍单率仅 5.7%（3/53，95%CI 1.9%–15.4%），与其余四仓 34%–45% 不重叠。</p>
+    <img src="/figures/warehouse_split.png" alt="分仓拆解">
+  </div>
+
+  <footer>全部数字由 analyze.py 生成，可用 verify.py 独立复核。数据只含题目发放的 fulfillments.csv。</footer>
+</div>
+<script>
+const row = (k, v) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
+const pct = x => (x * 100).toFixed(1) + '%';
+const yuan = x => Number(x).toLocaleString('zh-CN', { maximumFractionDigits: 0 }) + ' 元';
+
+async function sim(t) {
+  const r = await fetch(`/api/simulate?threshold=${t}`).then(x => x.json());
+  document.getElementById('net').textContent = (r.net > 0 ? '+' : '') + yuan(r.net);
+  document.getElementById('verdict').innerHTML =
+    `<span class="tag ${r.net > 0 ? 'good' : 'bad'}">${r.verdict}</span> ` +
+    `<span style="color:#6b7280;font-size:13px">折合每天 ${yuan(r.net_per_day)}　·　准确率 ${pct(r.precision)} ${r.precision >= r.breakeven_precision ? '（高于 13.3% 平衡线）' : '（低于 13.3% 平衡线）'}</span>`;
+  document.getElementById('detail').innerHTML =
+    row('被拦截订单', `${r.intercepted} 单（${pct(r.intercept_share)}）`) +
+    row('其中真会砍单', `${r.cancels_caught} 单（准确率 ${pct(r.precision)}）`) +
+    row('覆盖全部砍单', pct(r.recall)) +
+    row('拦截成本', yuan(r.cost)) +
+    row('挽回损失', yuan(r.loss_avoided)) +
+    row('7 天净收益', `<span style="color:${r.net > 0 ? 'var(--good)' : 'var(--bad)'}">${(r.net > 0 ? '+' : '') + yuan(r.net)}</span>`);
+}
+
+document.getElementById('t').addEventListener('input', e => {
+  document.getElementById('tVal').textContent = e.target.value;
+  sim(e.target.value);
+});
+
+fetch('/api/findings').then(x => x.json()).then(f => {
+  const tb = document.querySelector('#policy tbody');
+  const rows = (f.policies || []).slice().sort((a, b) => b.net - a.net);
+  tb.innerHTML = rows.map(p => `<tr class="${p.net > 4000 ? 'best' : ''}">
+    <td>${p.rule}</td><td>${p.intercepted}</td><td>${p.cancels_caught}</td>
+    <td>${pct(p.precision)}</td><td>${pct(p.recall)}</td>
+    <td>${yuan(p.cost)}</td><td>${yuan(p.loss_avoided)}</td>
+    <td><b>${(p.net > 0 ? '+' : '') + yuan(p.net)}</b></td></tr>`).join('');
+}).catch(() => {});
+
+sim(15);
+</script>
+</body>
+</html>

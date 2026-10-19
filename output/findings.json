@@ -1,0 +1,202 @@
+{
+  "meta": {
+    "raw_rows": 1220,
+    "dup_rows": 58,
+    "dedup_rows": 1162,
+    "unreported": 46,
+    "date_min": "2026-08-31 23:04:00+00:00",
+    "date_max": "2026-09-07 13:59:00+00:00",
+    "days": 7,
+    "tz_naive_staleness_mean": 491.6
+  },
+  "overall": {
+    "evaluated_orders": 1116,
+    "cancelled": 119,
+    "cancel_rate": 0.1066,
+    "stale_share": 0.2258
+  },
+  "fresh_vs_stale": {
+    "fresh_orders": 864,
+    "fresh_cancel_rate": 0.0417,
+    "stale_orders": 252,
+    "stale_cancel_rate": 0.3294,
+    "lift": 7.9,
+    "stale_cancels": 83,
+    "stale_cancel_share": 0.6975
+  },
+  "staleness_buckets": [
+    {
+      "bucket": "0-5 分钟",
+      "orders": 574,
+      "cancelled": 23,
+      "cancel_rate": 0.0401,
+      "share": 0.5143
+    },
+    {
+      "bucket": "5-15 分钟",
+      "orders": 297,
+      "cancelled": 16,
+      "cancel_rate": 0.0539,
+      "share": 0.2661
+    },
+    {
+      "bucket": "15-30 分钟",
+      "orders": 78,
+      "cancelled": 27,
+      "cancel_rate": 0.3462,
+      "share": 0.0699
+    },
+    {
+      "bucket": "30-60 分钟",
+      "orders": 167,
+      "cancelled": 53,
+      "cancel_rate": 0.3174,
+      "share": 0.1496
+    }
+  ],
+  "policies": [
+    {
+      "rule": "B 只看同步旧 (stale>=15m)",
+      "intercepted": 252,
+      "cancels_caught": 83,
+      "precision": 0.3294,
+      "recall": 0.6975,
+      "cost": 3024.0,
+      "loss_avoided": 7470.0,
+      "net": 4446.0
+    },
+    {
+      "rule": "E 旧或库存少 (stale>=15 | stock<=5)",
+      "intercepted": 424,
+      "cancels_caught": 101,
+      "precision": 0.2382,
+      "recall": 0.8487,
+      "cost": 5088.0,
+      "loss_avoided": 9090.0,
+      "net": 4002.0
+    },
+    {
+      "rule": "D 超旧 (stale>=30m)",
+      "intercepted": 171,
+      "cancels_caught": 55,
+      "precision": 0.3216,
+      "recall": 0.4622,
+      "cost": 2052.0,
+      "loss_avoided": 4950.0,
+      "net": 2898.0
+    },
+    {
+      "rule": "C 旧且库存少 (stale>=15 & stock<=10)",
+      "intercepted": 74,
+      "cancels_caught": 19,
+      "precision": 0.2568,
+      "recall": 0.1597,
+      "cost": 888.0,
+      "loss_avoided": 1710.0,
+      "net": 822.0
+    },
+    {
+      "rule": "A 只看库存少 (stock<=5)",
+      "intercepted": 218,
+      "cancels_caught": 30,
+      "precision": 0.1376,
+      "recall": 0.2521,
+      "cost": 2616.0,
+      "loss_avoided": 2700.0,
+      "net": 84.0
+    }
+  ],
+  "best_threshold": {
+    "threshold_min": 14,
+    "net_per_7d": 4644.0
+  },
+  "warehouse": [
+    {
+      "warehouse": "华中一仓",
+      "orders": 229,
+      "cancel_rate": 0.1397,
+      "stale_share": 0.2358,
+      "median_stale": 5.0,
+      "cancel_rate_fresh": 0.0514,
+      "stale_n": 54,
+      "stale_cancelled": 23,
+      "cancel_rate_stale": 0.4259,
+      "stale_ci_low": 0.303,
+      "stale_ci_high": 0.558
+    },
+    {
+      "warehouse": "华南一仓",
+      "orders": 207,
+      "cancel_rate": 0.1208,
+      "stale_share": 0.2029,
+      "median_stale": 5.0,
+      "cancel_rate_fresh": 0.0364,
+      "stale_n": 42,
+      "stale_cancelled": 19,
+      "cancel_rate_stale": 0.4524,
+      "stale_ci_low": 0.312,
+      "stale_ci_high": 0.601
+    },
+    {
+      "warehouse": "华北二仓",
+      "orders": 232,
+      "cancel_rate": 0.1034,
+      "stale_share": 0.2026,
+      "median_stale": 5.0,
+      "cancel_rate_fresh": 0.027,
+      "stale_n": 47,
+      "stale_cancelled": 19,
+      "cancel_rate_stale": 0.4043,
+      "stale_ci_low": 0.276,
+      "stale_ci_high": 0.547
+    },
+    {
+      "warehouse": "西南一仓",
+      "orders": 225,
+      "cancel_rate": 0.1022,
+      "stale_share": 0.2489,
+      "median_stale": 6.0,
+      "cancel_rate_fresh": 0.0237,
+      "stale_n": 56,
+      "stale_cancelled": 19,
+      "cancel_rate_stale": 0.3393,
+      "stale_ci_low": 0.229,
+      "stale_ci_high": 0.47
+    },
+    {
+      "warehouse": "华东一仓",
+      "orders": 223,
+      "cancel_rate": 0.0673,
+      "stale_share": 0.2377,
+      "median_stale": 6.0,
+      "cancel_rate_fresh": 0.0706,
+      "stale_n": 53,
+      "stale_cancelled": 3,
+      "cancel_rate_stale": 0.0566,
+      "stale_ci_low": 0.019,
+      "stale_ci_high": 0.154
+    }
+  ],
+  "recommended": {
+    "rule": "B 只看同步旧 (stale>=15m)",
+    "intercepted": 252,
+    "cancels_caught": 83,
+    "precision": 0.3294,
+    "recall": 0.6975,
+    "cost_per_7d": 3024.0,
+    "loss_avoided_per_7d": 7470.0,
+    "net_per_7d": 4446.0,
+    "net_per_day": 635.1,
+    "net_per_year": 231827.1
+  },
+  "counterfactual_no_stale": {
+    "explanation": "若把同步延迟压到 15 分钟以内，延迟组砍单率会回落到新鲜组水平",
+    "cancels_avoided": 72.5,
+    "value_per_7d": 6525.0
+  },
+  "non_drivers": {
+    "available_stock_corr": -0.0163,
+    "daily_orders_corr": 0.1254,
+    "staleness_corr": 0.346
+  }
+}
